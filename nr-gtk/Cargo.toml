@@ -1,0 +1,11 @@
+[package]
+name = "nr-gtk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+fuzzy-matcher = { workspace = true }
+gtk = { workspace = true }
+nr-core = { workspace = true }
+nr-hyprland = { workspace = true }
