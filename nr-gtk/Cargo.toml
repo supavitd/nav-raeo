@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
+directories = { workspace = true }
 fuzzy-matcher = { workspace = true }
 gtk = { workspace = true }
 nr-core = { workspace = true }

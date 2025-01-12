@@ -2,10 +2,11 @@ mod action;
 mod object;
 
 use crate::object::WindowObject;
+use directories::BaseDirs;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use gtk::{
-    gdk, glib, Application, ApplicationWindow, Box as GtkBox, CustomFilter, Entry,
+    gdk, glib, Application, ApplicationWindow, Box as GtkBox, CssProvider, CustomFilter, Entry,
     EventControllerKey, ListBoxRow, ListItem, ListView, Orientation, SearchEntry,
     SignalListItemFactory, SingleSelection,
 };
@@ -14,16 +15,34 @@ use gtk::{prelude::*, Label, ListBox, ScrolledWindow};
 use nr_core::window::Window as NrWindow;
 use nr_hyprland::{jump_to_window, list_windows};
 
-const APP_ID: &str = "com.github.supavitd.nav-raeo";
+const APP_ID: &str = "com.github.supavitd.nav_raeo";
 
 fn main() -> anyhow::Result<glib::ExitCode> {
     let app = Application::builder().application_id(APP_ID).build();
 
+    app.connect_startup(|_| load_css());
     app.connect_activate(|app| {
         build_ui(app).expect("Failed to build UI");
     });
 
     Ok(app.run())
+}
+
+fn load_css() {
+    let Some(config_dir) = BaseDirs::new().map(|dir| dir.config_dir().join("nav-raeo")) else {
+        return;
+    };
+
+    dbg!("{}", config_dir.join("style.css"));
+
+    let provider = CssProvider::new();
+    provider.load_from_path(config_dir.join("style.css"));
+
+    gtk::style_context_add_provider_for_display(
+        &gdk::Display::default().expect("Could not connect to a display"),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
 }
 
 fn build_ui(app: &Application) -> anyhow::Result<()> {
@@ -121,7 +140,6 @@ fn build_window_list_ui(app: &Application, search: &SearchEntry) -> anyhow::Resu
                     .downcast_ref::<WindowObject>()
                     .expect("The item has to be a `WindowObject`.");
                 let score = matcher.fuzzy_match(&window_obj.title(), &text);
-                dbg!("{}", &score);
                 score.is_some()
             });
         }
