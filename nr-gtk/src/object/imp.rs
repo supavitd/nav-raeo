@@ -15,7 +15,7 @@ pub struct WindowObject {
 
 #[glib::object_subclass]
 impl ObjectSubclass for WindowObject {
-    const NAME: &'static str = "GtkNavReaoWindow";
+    const NAME: &'static str = "GtkNavRaeoWindow";
     type Type = super::WindowObject;
 }
 

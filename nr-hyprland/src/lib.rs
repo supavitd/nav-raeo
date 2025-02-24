@@ -2,7 +2,7 @@ use hyprland::data::Clients;
 use hyprland::dispatch;
 use hyprland::dispatch::DispatchType::FocusWindow;
 use hyprland::dispatch::{Dispatch, DispatchType, WindowIdentifier};
-use hyprland::shared::HyprData;
+use hyprland::shared::{Address, HyprData};
 use nr_core::window::Window;
 
 pub fn list_windows() -> anyhow::Result<Vec<Window>> {
@@ -11,18 +11,16 @@ pub fn list_windows() -> anyhow::Result<Vec<Window>> {
     for client in clients.iter() {
         windows.push(Window {
             title: client.title.to_owned(),
-            identifier: client.pid.to_string(),
+            identifier: client.address.to_string(),
         });
     }
     Ok(windows)
 }
 
 pub fn jump_to_window(window: Window) -> anyhow::Result<()> {
-    let pid = window.identifier.parse::<u32>()?;
+    let address = Address::new(window.identifier);
 
-    // TODO: Use Window address instead of PID. For some reason, different chrome windows return
-    // the same pid.
-    dispatch!(FocusWindow, WindowIdentifier::ProcessId(pid))?;
+    dispatch!(FocusWindow, WindowIdentifier::Address(address))?;
 
     Ok(())
 }
