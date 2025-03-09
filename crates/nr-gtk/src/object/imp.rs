@@ -1,7 +1,6 @@
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use nr_core::window::Window;
 use std::cell::RefCell;
 
 #[derive(glib::Properties, Default)]

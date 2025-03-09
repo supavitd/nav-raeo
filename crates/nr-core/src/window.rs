@@ -9,4 +9,4 @@ pub trait WindowManager {
     fn jump_to_window(&self, window: Window) -> anyhow::Result<()>;
 }
 
-//pub trait WmLru {}
+pub trait WindowOrdering {} // May want to use stdlib trait

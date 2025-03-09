@@ -1,31 +1,34 @@
-mod action;
 mod object;
+
+use std::rc::Rc;
 
 use crate::object::WindowObject;
 use directories::BaseDirs;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use gtk::{
-    gdk, glib, Application, ApplicationWindow, Box as GtkBox, CssProvider, CustomFilter, Entry,
-    EventControllerKey, ListBoxRow, ListItem, ListView, Orientation, SearchEntry,
-    SignalListItemFactory, SingleSelection,
+    gdk, glib, Application, ApplicationWindow, Box as GtkBox, CssProvider, CustomFilter, ListItem,
+    ListView, Orientation, SearchEntry, SignalListItemFactory, SingleSelection,
 };
-use gtk::{gio, Filter, FilterListModel};
-use gtk::{prelude::*, Label, ListBox, ScrolledWindow};
-use nr_core::window::Window as NrWindow;
-use nr_hyprland::{jump_to_window, list_windows};
+use gtk::{gio, FilterListModel};
+use gtk::{prelude::*, Label, ScrolledWindow};
+use nr_core::window::{Window as NrWindow, WindowManager};
 
 const APP_ID: &str = "com.github.supavitd.nav_raeo";
 
-fn main() -> anyhow::Result<glib::ExitCode> {
+pub fn run_app<T: WindowManager + 'static>(wm: Rc<T>) -> glib::ExitCode {
     let app = Application::builder().application_id(APP_ID).build();
 
+    log::debug!("Starting gtk...");
+
     app.connect_startup(|_| load_css());
-    app.connect_activate(|app| {
-        build_ui(app).expect("Failed to build UI");
+
+    let wm_gtk = Rc::clone(&wm);
+    app.connect_activate(move |app| {
+        build_ui(app, Rc::clone(&wm_gtk)).expect("Failed to build UI");
     });
 
-    Ok(app.run())
+    app.run()
 }
 
 fn load_css() {
@@ -33,7 +36,7 @@ fn load_css() {
         return;
     };
 
-    dbg!("{}", config_dir.join("style.css"));
+    log::debug!("{:?}", config_dir.join("style.css"));
 
     let provider = CssProvider::new();
     provider.load_from_path(config_dir.join("style.css"));
@@ -45,13 +48,13 @@ fn load_css() {
     );
 }
 
-fn build_ui(app: &Application) -> anyhow::Result<()> {
+fn build_ui<T: WindowManager + 'static>(app: &Application, wm: Rc<T>) -> anyhow::Result<()> {
     let search_entry = SearchEntry::builder().placeholder_text("Search...").build();
     search_entry.set_search_delay(100);
 
     // TODO: Make sure the scrolled window still works but search_entry should be outside of list
     // so the search entry sticks to the top
-    let list_view = build_window_list_ui(app, &search_entry)?;
+    let list_view = build_window_list_ui(app, wm, &search_entry)?;
 
     let scrolled_window = ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -95,9 +98,14 @@ fn build_ui(app: &Application) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_window_list_ui(app: &Application, search: &SearchEntry) -> anyhow::Result<ListView> {
+fn build_window_list_ui<T: WindowManager + 'static>(
+    app: &Application,
+    wm: Rc<T>,
+    search: &SearchEntry,
+) -> anyhow::Result<ListView> {
     let model = gio::ListStore::new::<WindowObject>();
-    let window_objs: Vec<WindowObject> = list_windows()?
+    let window_objs: Vec<WindowObject> = wm
+        .list_windows()?
         .iter()
         .map(|w| WindowObject::from(&w))
         .collect();
@@ -128,7 +136,7 @@ fn build_window_list_ui(app: &Application, search: &SearchEntry) -> anyhow::Resu
         label.set_label(&window_obj.title());
     });
 
-    let filter = CustomFilter::new(move |obj| true);
+    let filter = CustomFilter::new(move |_| true);
     search.connect_search_changed(glib::clone!(
         #[strong]
         filter,
@@ -152,6 +160,8 @@ fn build_window_list_ui(app: &Application, search: &SearchEntry) -> anyhow::Resu
     list_view.connect_activate(glib::clone!(
         #[strong]
         app,
+        #[strong]
+        wm,
         move |l, _| {
             if let Some(model) = l.model() {
                 let single_select = model
@@ -160,8 +170,8 @@ fn build_window_list_ui(app: &Application, search: &SearchEntry) -> anyhow::Resu
 
                 if let Some(obj) = single_select.selected_item() {
                     let window_obj = obj.downcast_ref::<WindowObject>().expect("Window object");
-                    dbg!("Selected object {}", &window_obj);
-                    jump_to_window(NrWindow {
+                    log::debug!("Selected object {:?}", &window_obj);
+                    wm.jump_to_window(NrWindow {
                         title: window_obj.title(),
                         identifier: window_obj.identifier(),
                     })

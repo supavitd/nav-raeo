@@ -8,5 +8,5 @@ anyhow = { workspace = true }
 directories = { workspace = true }
 fuzzy-matcher = { workspace = true }
 gtk = { workspace = true }
+log = { workspace = true }
 nr-core = { workspace = true }
-nr-hyprland = { workspace = true }

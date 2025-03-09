@@ -1,0 +1,11 @@
+[package]
+name = "nav-raeo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+env_logger = { workspace = true }
+log = { workspace = true }
+nr-core = { workspace = true }
+nr-gtk = { workspace = true }
+nr-hyprland = { workspace = true }
